@@ -19,37 +19,60 @@ function Chat({ user, onLogout }) {
     // Load previous messages
     messageAPI.getMessages()
       .then(response => {
-        setMessages(response.data);
+        setMessages(response.data || []);
         setLoading(false);
       })
       .catch(error => {
         console.error('Error loading messages:', error);
+        setMessages([]);
         setLoading(false);
       });
 
-    // Socket event listeners
-    socketRef.current.on('newMessage', (message) => {
-      setMessages(prev => [...prev, message]);
-    });
+    // Wait for socket connection before setting up listeners
+    const setupSocketListeners = () => {
+      if (!socketRef.current) return;
 
-    socketRef.current.on('activeUsers', (users) => {
-      setActiveUsers(users);
-    });
+      // Socket event listeners
+      socketRef.current.on('newMessage', (message) => {
+        setMessages(prev => [...prev, message]);
+      });
 
-    socketRef.current.on('userTyping', ({ username }) => {
-      setTypingUser(username);
-      setTimeout(() => setTypingUser(null), 3000);
-    });
+      socketRef.current.on('activeUsers', (users) => {
+        setActiveUsers(users || []);
+      });
 
-    socketRef.current.on('userStopTyping', () => {
-      setTypingUser(null);
-    });
+      socketRef.current.on('userTyping', ({ username }) => {
+        setTypingUser(username);
+        setTimeout(() => setTypingUser(null), 3000);
+      });
 
-    socketRef.current.on('error', (error) => {
-      console.error('Socket error:', error);
-    });
+      socketRef.current.on('userStopTyping', () => {
+        setTypingUser(null);
+      });
+
+      socketRef.current.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
+    };
+
+    // Setup listeners when connected
+    if (socketRef.current.connected) {
+      setupSocketListeners();
+    } else {
+      socketRef.current.on('connect', () => {
+        setupSocketListeners();
+      });
+    }
 
     return () => {
+      if (socketRef.current) {
+        socketRef.current.off('newMessage');
+        socketRef.current.off('activeUsers');
+        socketRef.current.off('userTyping');
+        socketRef.current.off('userStopTyping');
+        socketRef.current.off('error');
+        socketRef.current.off('connect');
+      }
       disconnectSocket();
     };
   }, [user.token]);
