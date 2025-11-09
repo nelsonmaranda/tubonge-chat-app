@@ -19,18 +19,28 @@ const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 // Remove trailing slash if present
 const cleanFrontendUrl = frontendUrl.replace(/\/$/, '');
 
+console.log('🔧 Configuring Socket.io with frontend URL:', cleanFrontendUrl);
+
 const io = socketIo(server, {
   cors: {
-    origin: cleanFrontendUrl,
-    methods: ['GET', 'POST'],
+    origin: function (origin, callback) {
+      // Allow requests from frontend URL or any origin in development
+      if (!origin || origin === cleanFrontendUrl || process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Authorization']
+    allowedHeaders: ['Authorization', 'Content-Type']
   },
   transports: ['polling', 'websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
-  path: '/socket.io/'
+  path: '/socket.io/',
+  serveClient: false
 });
 
 // Middleware - CORS must be before other middleware
@@ -44,13 +54,17 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Explicit OPTIONS handler for Socket.io path
-app.options('/socket.io/*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', cleanFrontendUrl);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204);
+// Explicit OPTIONS handler for all Socket.io paths
+app.options('*', (req, res, next) => {
+  if (req.path.startsWith('/socket.io/')) {
+    res.header('Access-Control-Allow-Origin', cleanFrontendUrl);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.sendStatus(204);
+  }
+  next();
 });
 
 app.use(helmet({
