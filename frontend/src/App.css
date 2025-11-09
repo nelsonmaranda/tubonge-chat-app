@@ -358,16 +358,18 @@ body {
   border-radius: 12px;
   max-width: 70%;
   word-wrap: break-word;
+  color: #333; /* Default dark color for all messages */
 }
 
 .message:not(.own) .message-content {
   background: white;
   border: 1px solid #e0e0e0;
+  color: #333; /* Explicit dark color for received messages */
 }
 
 .message.own .message-content {
   background: #667eea;
-  color: white;
+  color: white; /* White text for sent messages */
 }
 
 .message-time {
