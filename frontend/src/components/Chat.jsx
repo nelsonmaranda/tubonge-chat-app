@@ -241,11 +241,25 @@ function Chat({ user, onLogout }) {
             </div>
           )}
         {messages.map((message, index) => {
+          // Handle both _id and id for message identifier
+          const messageId = message._id || message.id;
+          
           // Safely access message properties
-          const senderId = message.sender?._id || (typeof message.sender === 'string' ? message.sender : null);
+          const senderId = message.sender?._id || message.sender?.id || (typeof message.sender === 'string' ? message.sender : null);
           const senderUsername = message.sender?.username || 'Unknown';
           
           // Extract content - handle different message structures
+          // Log the raw message for debugging
+          if (index === messages.length - 1) {
+            console.log('🔍 Rendering latest message:', {
+              messageId,
+              hasContent: 'content' in message,
+              contentValue: message.content,
+              contentType: typeof message.content,
+              fullMessage: message
+            });
+          }
+          
           let messageContent = '';
           if (message.content !== undefined && message.content !== null) {
             messageContent = String(message.content).trim();
@@ -258,24 +272,34 @@ function Chat({ user, onLogout }) {
           const isOwnMessage = senderId === user._id;
           
           // Debug logging for empty messages
-          if (!messageContent && message._id) {
-            console.warn('⚠️ Empty message content detected:', {
-              messageId: message._id,
-              fullMessage: JSON.stringify(message, null, 2),
-              sender: senderUsername,
-              hasContent: !!message.content,
+          if (!messageContent && messageId) {
+            console.warn('⚠️ Empty message content detected during render:', {
+              messageId,
+              hasContent: 'content' in message,
               contentValue: message.content,
-              contentType: typeof message.content
+              contentType: typeof message.content,
+              fullMessage: JSON.stringify(message, null, 2),
+              sender: senderUsername
             });
+          }
+          
+          // Final check - if content is still empty but we know it should exist
+          if (!messageContent && message.content) {
+            console.error('❌ Content exists but extraction failed:', {
+              rawContent: message.content,
+              type: typeof message.content,
+              message: message
+            });
+            messageContent = String(message.content);
           }
           
           return (
             <div
-              key={message._id || `msg-${index}`}
+              key={messageId || `msg-${index}`}
               className={`message ${isOwnMessage ? 'own' : ''}`}
             >
               <div className="message-sender">{senderUsername}</div>
-              <div className="message-content">
+              <div className="message-content" data-message-id={messageId}>
                 {messageContent || '(empty message)'}
               </div>
               <div className="message-time">{message.timestamp ? formatTime(message.timestamp) : ''}</div>
