@@ -248,24 +248,37 @@ function Chat({ user, onLogout }) {
           const senderId = message.sender?._id || message.sender?.id || (typeof message.sender === 'string' ? message.sender : null);
           const senderUsername = message.sender?.username || 'Unknown';
           
-          // Extract content - handle different message structures
-          // Log the raw message for debugging
+          // Extract content - directly access content property
+          // Log the raw message for debugging (only for latest message)
           if (index === messages.length - 1) {
             console.log('🔍 Rendering latest message:', {
               messageId,
               hasContent: 'content' in message,
               contentValue: message.content,
               contentType: typeof message.content,
+              contentLength: message.content?.length,
               fullMessage: message
             });
           }
           
+          // Direct content extraction - prioritize content property
           let messageContent = '';
-          if (message.content !== undefined && message.content !== null) {
-            messageContent = String(message.content).trim();
-          } else if (message.text !== undefined && message.text !== null) {
+          if (message.content != null) {  // != null checks for both null and undefined
+            const rawContent = message.content;
+            messageContent = String(rawContent).trim();
+            
+            // Debug if content becomes empty after trim
+            if (!messageContent && rawContent) {
+              console.warn('⚠️ Content became empty after trim:', {
+                rawContent,
+                type: typeof rawContent,
+                length: String(rawContent).length
+              });
+              messageContent = String(rawContent); // Use untrimmed version
+            }
+          } else if (message.text != null) {
             messageContent = String(message.text).trim();
-          } else if (message.message !== undefined && message.message !== null) {
+          } else if (message.message != null) {
             messageContent = String(message.message).trim();
           }
           
@@ -278,19 +291,10 @@ function Chat({ user, onLogout }) {
               hasContent: 'content' in message,
               contentValue: message.content,
               contentType: typeof message.content,
+              messageKeys: Object.keys(message),
               fullMessage: JSON.stringify(message, null, 2),
               sender: senderUsername
             });
-          }
-          
-          // Final check - if content is still empty but we know it should exist
-          if (!messageContent && message.content) {
-            console.error('❌ Content exists but extraction failed:', {
-              rawContent: message.content,
-              type: typeof message.content,
-              message: message
-            });
-            messageContent = String(message.content);
           }
           
           return (
