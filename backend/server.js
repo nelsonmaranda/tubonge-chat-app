@@ -82,9 +82,13 @@ app.use('/api/', limiter);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
+  .then(() => {
+    console.log('✅ MongoDB Connected');
+    console.log('📊 Database:', mongoose.connection.db.databaseName);
+  })
   .catch(err => {
     console.error('❌ MongoDB Connection Error:', err);
+    console.error('❌ MONGODB_URI:', process.env.MONGODB_URI ? 'Set (hidden)' : 'NOT SET');
     process.exit(1);
   });
 
@@ -203,11 +207,43 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+// Verify critical environment variables
+console.log('🔍 Environment Check:');
+console.log(`  - PORT: ${PORT}`);
+console.log(`  - NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+console.log(`  - FRONTEND_URL: ${process.env.FRONTEND_URL || 'NOT SET'}`);
+console.log(`  - MONGODB_URI: ${process.env.MONGODB_URI ? 'Set' : 'NOT SET'}`);
+console.log(`  - JWT_SECRET: ${process.env.JWT_SECRET ? 'Set' : 'NOT SET'}`);
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${cleanFrontendUrl}`);
   console.log(`🔌 Socket.io enabled on path: /socket.io/`);
   console.log(`✅ CORS configured for: ${cleanFrontendUrl}`);
+  console.log(`📡 Socket.io server initialized: ${io ? 'Yes' : 'No'}`);
+  console.log(`🔗 Server listening on: http://0.0.0.0:${PORT}`);
+  console.log(`✅ Health check available at: /health`);
+  console.log(`✅ Socket.io available at: /socket.io/`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server Error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+  }
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
