@@ -247,12 +247,12 @@ function Chat({ user, onLogout }) {
           
           // Extract content - handle different message structures
           let messageContent = '';
-          if (message.content) {
-            messageContent = message.content;
-          } else if (message.text) {
-            messageContent = message.text;
-          } else if (message.message) {
-            messageContent = message.message;
+          if (message.content !== undefined && message.content !== null) {
+            messageContent = String(message.content).trim();
+          } else if (message.text !== undefined && message.text !== null) {
+            messageContent = String(message.text).trim();
+          } else if (message.message !== undefined && message.message !== null) {
+            messageContent = String(message.message).trim();
           }
           
           const isOwnMessage = senderId === user._id;
@@ -261,8 +261,11 @@ function Chat({ user, onLogout }) {
           if (!messageContent && message._id) {
             console.warn('⚠️ Empty message content detected:', {
               messageId: message._id,
-              message: message,
-              sender: senderUsername
+              fullMessage: JSON.stringify(message, null, 2),
+              sender: senderUsername,
+              hasContent: !!message.content,
+              contentValue: message.content,
+              contentType: typeof message.content
             });
           }
           
@@ -273,7 +276,7 @@ function Chat({ user, onLogout }) {
             >
               <div className="message-sender">{senderUsername}</div>
               <div className="message-content">
-                {messageContent ? messageContent : '(empty message)'}
+                {messageContent || '(empty message)'}
               </div>
               <div className="message-time">{message.timestamp ? formatTime(message.timestamp) : ''}</div>
             </div>
