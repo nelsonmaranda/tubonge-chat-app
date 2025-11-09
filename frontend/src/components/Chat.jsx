@@ -32,12 +32,19 @@ function Chat({ user, onLogout }) {
         setLoading(false);
       });
 
-    // Setup socket event listeners
+    // Setup socket event listeners (only once)
     const setupSocketListeners = () => {
       if (!socketRef.current) {
         console.warn('⚠️ Socket not available for listener setup');
         return;
       }
+
+      // Remove existing listeners first to prevent duplicates
+      socketRef.current.off('activeUsers');
+      socketRef.current.off('newMessage');
+      socketRef.current.off('userTyping');
+      socketRef.current.off('userStopTyping');
+      socketRef.current.off('error');
 
       console.log('🎧 Setting up Socket.io listeners...');
 
@@ -47,10 +54,22 @@ function Chat({ user, onLogout }) {
         setActiveUsers(users || []);
       });
 
-      // New message listener
+      // New message listener - prevent duplicates by checking message ID
       socketRef.current.on('newMessage', (message) => {
         console.log('💬 New message received:', message);
-        setMessages(prev => [...prev, message]);
+        if (!message || !message._id) {
+          console.warn('⚠️ Invalid message received:', message);
+          return;
+        }
+        setMessages(prev => {
+          // Check if message already exists to prevent duplicates
+          const exists = prev.some(msg => msg._id === message._id);
+          if (exists) {
+            console.log('⚠️ Duplicate message ignored:', message._id);
+            return prev;
+          }
+          return [...prev, message];
+        });
       });
 
       // Typing indicators
@@ -70,13 +89,15 @@ function Chat({ user, onLogout }) {
       });
     };
 
-    // Setup listeners immediately and also on connect
-    setupSocketListeners();
-    
-    socketRef.current.on('connect', () => {
-      console.log('✅ Socket connected, setting up listeners...');
+    // Setup listeners when socket connects
+    if (socketRef.current.connected) {
       setupSocketListeners();
-    });
+    } else {
+      socketRef.current.once('connect', () => {
+        console.log('✅ Socket connected, setting up listeners...');
+        setupSocketListeners();
+      });
+    }
 
     return () => {
       console.log('🧹 Cleaning up Socket.io connection...');
@@ -102,11 +123,14 @@ function Chat({ user, onLogout }) {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !socketRef.current) return;
 
-    socketRef.current.emit('sendMessage', { content: newMessage });
+    const messageContent = newMessage.trim();
     setNewMessage('');
     socketRef.current.emit('stopTyping');
+    
+    // Send message via socket - don't add to state here, wait for server response
+    socketRef.current.emit('sendMessage', { content: messageContent });
   };
 
   const handleTyping = (e) => {
@@ -205,16 +229,24 @@ function Chat({ user, onLogout }) {
               <span className="chatting-with">Chatting with: <strong>{selectedUser.username}</strong></span>
             </div>
           )}
-        {messages.map((message, index) => (
-          <div
-            key={message._id || index}
-            className={`message ${message.sender._id === user._id ? 'own' : ''}`}
-          >
-            <div className="message-sender">{message.sender.username}</div>
-            <div className="message-content">{message.content}</div>
-            <div className="message-time">{formatTime(message.timestamp)}</div>
-          </div>
-        ))}
+        {messages.map((message, index) => {
+          // Safely access message properties
+          const senderId = message.sender?._id || message.sender?._id || message.sender;
+          const senderUsername = message.sender?.username || 'Unknown';
+          const messageContent = message.content || '';
+          const isOwnMessage = senderId === user._id;
+          
+          return (
+            <div
+              key={message._id || `msg-${index}`}
+              className={`message ${isOwnMessage ? 'own' : ''}`}
+            >
+              <div className="message-sender">{senderUsername}</div>
+              <div className="message-content">{messageContent || '(empty message)'}</div>
+              <div className="message-time">{message.timestamp ? formatTime(message.timestamp) : ''}</div>
+            </div>
+          );
+        })}
         {typingUser && (
           <div className="typing-indicator">{typingUser} is typing...</div>
         )}

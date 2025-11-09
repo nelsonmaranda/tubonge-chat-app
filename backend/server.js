@@ -161,20 +161,41 @@ io.on('connection', (socket) => {
   // Handle new message
   socket.on('sendMessage', async (data) => {
     try {
+      if (!data.content || !data.content.trim()) {
+        socket.emit('error', { message: 'Message content cannot be empty' });
+        return;
+      }
+
       const message = new Message({
         sender: socket.user.id,
-        content: data.content,
+        content: data.content.trim(),
         timestamp: new Date()
       });
       
       await message.save();
       
       const populatedMessage = await Message.findById(message._id)
-        .populate('sender', 'username');
+        .populate('sender', 'username _id');
       
-      io.emit('newMessage', populatedMessage);
+      if (!populatedMessage) {
+        throw new Error('Failed to retrieve saved message');
+      }
+
+      // Convert to plain object to ensure proper serialization
+      const messageData = {
+        _id: populatedMessage._id,
+        sender: {
+          _id: populatedMessage.sender._id,
+          username: populatedMessage.sender.username
+        },
+        content: populatedMessage.content,
+        timestamp: populatedMessage.timestamp
+      };
+      
+      console.log('📤 Broadcasting message:', messageData);
+      io.emit('newMessage', messageData);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       socket.emit('error', { message: 'Failed to send message' });
     }
   });
