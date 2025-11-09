@@ -436,14 +436,6 @@ This project is licensed under the MIT License.
 **Nelson Maranda**
 - GitHub: [@nelsonmaranda](https://github.com/nelsonmaranda)
 
-## 🙏 Acknowledgments
-
-- PLP Academy - MERN Stack Development Course
-- Week 7 Assignment: Deployment and DevOps Essentials
-- Socket.io and React documentation
-
----
-
 ## 📞 Support
 
 For questions or issues:
