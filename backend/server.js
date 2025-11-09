@@ -16,22 +16,26 @@ const server = http.createServer(app);
 
 // Socket.io configuration
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Remove trailing slash if present
+const cleanFrontendUrl = frontendUrl.replace(/\/$/, '');
+
 const io = socketIo(server, {
   cors: {
-    origin: frontendUrl,
+    origin: cleanFrontendUrl,
     methods: ['GET', 'POST'],
     credentials: true,
     allowedHeaders: ['Authorization']
   },
-  transports: ['polling', 'websocket'], // Prefer polling for Render compatibility
+  transports: ['polling', 'websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  path: '/socket.io/'
 });
 
 // Middleware - CORS must be before other middleware
 app.use(cors({
-  origin: frontendUrl,
+  origin: cleanFrontendUrl,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -65,8 +69,9 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    frontendUrl: frontendUrl,
-    socketIoEnabled: true
+    frontendUrl: cleanFrontendUrl,
+    socketIoEnabled: true,
+    activeUsers: activeUsers.size
   });
 });
 
@@ -77,20 +82,39 @@ app.use('/api/messages', messageRoutes);
 // Socket.io connection handling
 const Message = require('./models/Message');
 
-io.use(verifySocketToken);
-
+// Active users tracking (must be defined before health check)
 const activeUsers = new Map();
 
+// Socket.io authentication middleware
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
+    }
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    next();
+  } catch (error) {
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
+
 io.on('connection', (socket) => {
-  console.log(`✅ User connected: ${socket.user.username}`);
+  console.log(`✅ User connected: ${socket.user.username} (ID: ${socket.user.id})`);
   
   activeUsers.set(socket.user.id, {
+    id: socket.user.id,
     username: socket.user.username,
     socketId: socket.id
   });
 
-  // Broadcast active users
-  io.emit('activeUsers', Array.from(activeUsers.values()));
+  // Immediately send active users to the newly connected user
+  socket.emit('activeUsers', Array.from(activeUsers.values()));
+  
+  // Broadcast to all other users
+  socket.broadcast.emit('activeUsers', Array.from(activeUsers.values()));
 
   // Join user to their room
   socket.join(socket.user.id);

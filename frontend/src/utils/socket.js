@@ -5,34 +5,40 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 let socket = null;
 
 export const initializeSocket = (token) => {
-  if (socket && socket.connected) {
-    return socket;
-  }
-  
+  // Always create a new connection to ensure fresh state
   if (socket) {
     socket.disconnect();
+    socket = null;
   }
+
+  console.log('🔌 Initializing Socket.io connection to:', SOCKET_URL);
 
   socket = io(SOCKET_URL, {
     auth: { token },
-    transports: ['polling', 'websocket'], // Prefer polling for Render compatibility
+    transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
     timeout: 20000,
-    forceNew: false
+    forceNew: true,
+    path: '/socket.io/'
   });
 
   socket.on('connect', () => {
-    console.log('✅ Socket.io connected');
+    console.log('✅ Socket.io connected successfully');
+    console.log('Socket ID:', socket.id);
   });
 
-  socket.on('disconnect', () => {
-    console.log('❌ Socket.io disconnected');
+  socket.on('disconnect', (reason) => {
+    console.log('❌ Socket.io disconnected:', reason);
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket.io connection error:', error);
+    console.error('❌ Socket.io connection error:', error.message);
+  });
+
+  socket.on('error', (error) => {
+    console.error('❌ Socket.io error:', error);
   });
 
   return socket;

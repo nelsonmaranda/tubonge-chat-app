@@ -13,35 +13,48 @@ function Chat({ user, onLogout }) {
   const socketRef = useRef(null);
 
   useEffect(() => {
+    console.log('🔌 Setting up Socket.io connection...');
+    
     // Initialize socket
     socketRef.current = initializeSocket(user.token);
 
     // Load previous messages
     messageAPI.getMessages()
       .then(response => {
+        console.log('📨 Loaded messages:', response.data?.length || 0);
         setMessages(response.data || []);
         setLoading(false);
       })
       .catch(error => {
-        console.error('Error loading messages:', error);
+        console.error('❌ Error loading messages:', error);
         setMessages([]);
         setLoading(false);
       });
 
-    // Wait for socket connection before setting up listeners
+    // Setup socket event listeners
     const setupSocketListeners = () => {
-      if (!socketRef.current) return;
+      if (!socketRef.current) {
+        console.warn('⚠️ Socket not available for listener setup');
+        return;
+      }
 
-      // Socket event listeners
-      socketRef.current.on('newMessage', (message) => {
-        setMessages(prev => [...prev, message]);
-      });
+      console.log('🎧 Setting up Socket.io listeners...');
 
+      // Active users listener
       socketRef.current.on('activeUsers', (users) => {
+        console.log('👥 Active users received:', users);
         setActiveUsers(users || []);
       });
 
+      // New message listener
+      socketRef.current.on('newMessage', (message) => {
+        console.log('💬 New message received:', message);
+        setMessages(prev => [...prev, message]);
+      });
+
+      // Typing indicators
       socketRef.current.on('userTyping', ({ username }) => {
+        console.log('⌨️ User typing:', username);
         setTypingUser(username);
         setTimeout(() => setTypingUser(null), 3000);
       });
@@ -50,21 +63,22 @@ function Chat({ user, onLogout }) {
         setTypingUser(null);
       });
 
+      // Error handling
       socketRef.current.on('error', (error) => {
-        console.error('Socket error:', error);
+        console.error('❌ Socket error:', error);
       });
     };
 
-    // Setup listeners when connected
-    if (socketRef.current.connected) {
+    // Setup listeners immediately and also on connect
+    setupSocketListeners();
+    
+    socketRef.current.on('connect', () => {
+      console.log('✅ Socket connected, setting up listeners...');
       setupSocketListeners();
-    } else {
-      socketRef.current.on('connect', () => {
-        setupSocketListeners();
-      });
-    }
+    });
 
     return () => {
+      console.log('🧹 Cleaning up Socket.io connection...');
       if (socketRef.current) {
         socketRef.current.off('newMessage');
         socketRef.current.off('activeUsers');
