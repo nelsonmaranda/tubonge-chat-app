@@ -31,7 +31,7 @@ jobs:
           VITE_SOCKET_URL: ${{ secrets.VITE_SOCKET_URL }}
 
       - name: Deploy to Vercel
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: ${{ secrets.VERCEL_TOKEN != null && secrets.VERCEL_TOKEN != '' }}
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
