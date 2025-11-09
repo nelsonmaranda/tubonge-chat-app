@@ -309,6 +309,12 @@ GET /health
 3. **Backend CD** - Auto-deploys to Render on main branch
 4. **Frontend CD** - Auto-deploys to Vercel on main branch
 
+### CI/CD Pipeline in Action
+
+![GitHub Actions CI/CD Pipeline](screenshots/github-actions-pipeline.png)
+
+The screenshot above shows the GitHub Actions workflow runs for the Tubonge chat application, demonstrating successful CI/CD pipeline execution with multiple workflow runs including Frontend CD, Backend CD, and CI tests.
+
 ### Setup CI/CD
 
 Add these secrets to your GitHub repository:
@@ -366,12 +372,6 @@ npm test
 
 ### Health Check
 Monitor backend health: `GET https://your-backend.onrender.com/health`
-
-### Recommended Monitoring Tools
-- [UptimeRobot](https://uptimerobot.com) - Free uptime monitoring
-- Vercel Analytics - Built-in frontend analytics
-- Render Logs - Backend logs and metrics
-- MongoDB Atlas - Database metrics
 
 ---
 
@@ -448,7 +448,7 @@ This project is licensed under the MIT License.
 
 For questions or issues:
 - Open an issue in the repository
-- Email: your-email@example.com
+- Email: nelsonmaranda2@gmail.com
 
 ---
 
