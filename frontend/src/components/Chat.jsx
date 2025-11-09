@@ -8,6 +8,7 @@ function Chat({ user, onLogout }) {
   const [activeUsers, setActiveUsers] = useState([]);
   const [typingUser, setTypingUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const socketRef = useRef(null);
@@ -127,6 +128,19 @@ function Chat({ user, onLogout }) {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleUserClick = (clickedUser) => {
+    // Don't allow selecting yourself
+    if (clickedUser.id === user._id || clickedUser.username === user.username) {
+      return;
+    }
+    setSelectedUser(clickedUser);
+    console.log('💬 Selected user for chat:', clickedUser.username);
+  };
+
+  const handleBackToAll = () => {
+    setSelectedUser(null);
+  };
+
   if (loading) {
     return (
       <div className="chat-container">
@@ -161,23 +175,36 @@ function Chat({ user, onLogout }) {
             {activeUsers.length === 0 ? (
               <div className="no-users">No other users online</div>
             ) : (
-              activeUsers.map((activeUser) => (
-                <div
-                  key={activeUser.id || activeUser.username}
-                  className={`user-item ${activeUser.id === user._id || activeUser.username === user.username ? 'current-user' : ''}`}
-                >
-                  <span className="user-indicator"></span>
-                  <span className="user-name">
-                    {activeUser.username}
-                    {activeUser.id === user._id || activeUser.username === user.username ? ' (You)' : ''}
-                  </span>
-                </div>
-              ))
+              activeUsers.map((activeUser) => {
+                const isCurrentUser = activeUser.id === user._id || activeUser.username === user.username;
+                const isSelected = selectedUser && (selectedUser.id === activeUser.id || selectedUser.username === activeUser.username);
+                
+                return (
+                  <div
+                    key={activeUser.id || activeUser.username}
+                    className={`user-item ${isCurrentUser ? 'current-user' : ''} ${isSelected ? 'selected' : ''}`}
+                    onClick={() => !isCurrentUser && handleUserClick(activeUser)}
+                    style={{ cursor: isCurrentUser ? 'default' : 'pointer' }}
+                  >
+                    <span className="user-indicator"></span>
+                    <span className="user-name">
+                      {activeUser.username}
+                      {isCurrentUser ? ' (You)' : ''}
+                    </span>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
         <div className="messages-container">
+          {selectedUser && (
+            <div className="chat-with-header">
+              <button className="back-button" onClick={handleBackToAll}>← Back</button>
+              <span className="chatting-with">Chatting with: <strong>{selectedUser.username}</strong></span>
+            </div>
+          )}
         {messages.map((message, index) => (
           <div
             key={message._id || index}

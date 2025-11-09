@@ -250,6 +250,20 @@ body {
 .user-item.current-user {
   background: #dbeafe;
   font-weight: 500;
+  cursor: default !important;
+}
+
+.user-item.selected {
+  background: #667eea;
+  color: white;
+}
+
+.user-item.selected .user-name {
+  color: white;
+}
+
+.user-item.selected .user-indicator {
+  background: white;
 }
 
 .user-indicator {
@@ -283,6 +297,43 @@ body {
   background: #f9fafb;
   display: flex;
   flex-direction: column;
+}
+
+.chat-with-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-bottom: 2px solid #667eea;
+  margin: -20px -20px 20px -20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.back-button {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.back-button:hover {
+  background: #5568d3;
+}
+
+.chatting-with {
+  color: #333;
+  font-size: 1rem;
+}
+
+.chatting-with strong {
+  color: #667eea;
 }
 
 .message {
