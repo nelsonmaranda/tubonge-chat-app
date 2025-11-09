@@ -135,6 +135,9 @@ function Chat({ user, onLogout }) {
     );
   }
 
+  // Filter out current user from active users list
+  const otherUsers = activeUsers.filter(u => u.id !== user._id && u.username !== user.username);
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -151,7 +154,33 @@ function Chat({ user, onLogout }) {
         </div>
       </div>
 
-      <div className="messages-container">
+      <div className="chat-body">
+        <div className="users-sidebar">
+          <div className="users-header">
+            <h3>👥 Online Users</h3>
+            <span className="users-count">{activeUsers.length}</span>
+          </div>
+          <div className="users-list">
+            {activeUsers.length === 0 ? (
+              <div className="no-users">No other users online</div>
+            ) : (
+              activeUsers.map((activeUser) => (
+                <div
+                  key={activeUser.id || activeUser.username}
+                  className={`user-item ${activeUser.id === user._id || activeUser.username === user.username ? 'current-user' : ''}`}
+                >
+                  <span className="user-indicator"></span>
+                  <span className="user-name">
+                    {activeUser.username}
+                    {activeUser.id === user._id || activeUser.username === user.username ? ' (You)' : ''}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="messages-container">
         {messages.map((message, index) => (
           <div
             key={message._id || index}
@@ -166,6 +195,7 @@ function Chat({ user, onLogout }) {
           <div className="typing-indicator">{typingUser} is typing...</div>
         )}
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       <div className="message-input-container">
